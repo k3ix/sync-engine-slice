@@ -1,0 +1,22 @@
+{
+  "name": "sync-engine-slice",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "seed": "tsx src/seed.ts",
+    "test": "vitest",
+    "typecheck": "tsc --noEmit",
+    "check": "biome check --write src"
+  },
+  "dependencies": {
+    "fastify": "^5.12.5"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.14",
+    "@types/node": "^26.6.2",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.1"
+  }
+}
