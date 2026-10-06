@@ -36,7 +36,9 @@ pnpm test -- --run
 
 ## Known limitations
 
-Written down rather than hidden: REST writes bypass the ledger; the drain is synchronous and a large
-backlog would block the event loop; resolution reads the record's whole applied history per change;
-`MAX(sync_id) + 1` is safe only because SQLite has a single writer; one unexpected error stops the
-queue until it is fixed. Polling and notifying the sender about rejections are the next phase.
+Written down rather than hidden: conflicts are decided by client clocks, which the client controls
+(a deliberate shortcut; the next step is a base version per record); REST writes bypass the ledger;
+the drain is synchronous and a large backlog would block the event loop; resolution reads the
+record's whole applied history per change; `MAX(sync_id) + 1` is safe only because SQLite has a
+single writer; one unexpected error stops the queue until it is fixed. Polling and notifying the
+sender about rejections are the next phase.

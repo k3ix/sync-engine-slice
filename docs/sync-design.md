@@ -22,7 +22,9 @@ at 10:00:05. User 2 sets `status = cancelled` at 10:00:02 and it arrives at 10:0
   because a replayed change always loses: a replayed create finds the record, a replayed update
   has the same timestamp as the applied one, a replayed delete finds the record deleted. A retried
   push is stored again as `superseded` rows.
-- Client clocks are trusted to be correct. The timestamp is epoch milliseconds.
+- Client clocks are trusted to be correct. The timestamp is epoch milliseconds. This is a deliberate
+  shortcut, not the target: a skewed or manipulated clock wins every conflict. The replacement is a
+  base version per record, with the server as the only source of order.
 - Conflicts are resolved per field: a strictly later client timestamp wins. With equal
   timestamps the change applied first stays.
 - There are no per-field timestamp columns. The history of applied changes in the `changes` table
@@ -185,6 +187,7 @@ generates one only when it is missing. Nothing else in the services changes. `cr
 
 ## Limitations
 
+- Conflicts are decided by client clocks, which the client controls; see Decisions.
 - REST writes bypass `changes`, so they get no `sync_id`, pollers will not see them, and
   resolution treats their fields as having no history (any sync update wins over them).
 - The drain runs synchronously until the queue is empty, which blocks the event loop for a large
