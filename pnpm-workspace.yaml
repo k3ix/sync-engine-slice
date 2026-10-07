@@ -1,2 +1,7 @@
 allowBuilds:
   esbuild: true
+  '@swc/core': true
+  '@scarf/scarf': false
+  cpu-features: false
+  protobufjs: false
+  ssh2: false

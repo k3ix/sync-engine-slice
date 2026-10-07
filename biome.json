@@ -1,6 +1,14 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "formatter": { "indentStyle": "space", "lineWidth": 100 },
-  "javascript": { "formatter": { "quoteStyle": "single" } },
-  "linter": { "rules": { "recommended": true } }
+  "javascript": {
+    "formatter": { "quoteStyle": "single" },
+    "parser": { "unsafeParameterDecoratorsEnabled": true }
+  },
+  "linter": {
+    "rules": {
+      "recommended": true,
+      "style": { "useImportType": "off" }
+    }
+  }
 }
