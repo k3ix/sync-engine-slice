@@ -1,5 +1,13 @@
 import { ApiProperty, ApiPropertyOptional, OmitType, PartialType } from '@nestjs/swagger';
-import { IsEmail, IsIn, IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
+import {
+  IsEmail,
+  IsIn,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  ValidateIf,
+} from 'class-validator';
 import { IsPatch } from '../common/is-patch.decorator.js';
 import { PageQuery } from '../common/page.query.js';
 import {
@@ -39,7 +47,7 @@ export class IssueFieldsDto {
 
 export class CreateIssueDto extends OmitType(IssueFieldsDto, ['priority'] as const) {
   @ApiPropertyOptional({ enum: ISSUE_PRIORITIES, default: 'normal' })
-  @IsOptional()
+  @ValidateIf((_, value) => value !== undefined)
   @IsIn(ISSUE_PRIORITIES)
   priority?: IssuePriority;
 }

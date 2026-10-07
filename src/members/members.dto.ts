@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, OmitType, PartialType } from '@nestjs/swagger';
-import { IsIn, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsIn, IsNotEmpty, IsString, ValidateIf } from 'class-validator';
 import { IsPatch } from '../common/is-patch.decorator.js';
 import { MEMBER_STATUSES, type MemberStatus } from './member.entity.js';
 
@@ -16,7 +16,7 @@ export class MemberFieldsDto {
 
 export class CreateMemberDto extends OmitType(MemberFieldsDto, ['status'] as const) {
   @ApiPropertyOptional({ enum: MEMBER_STATUSES, default: 'invited' })
-  @IsOptional()
+  @ValidateIf((_, value) => value !== undefined)
   @IsIn(MEMBER_STATUSES)
   status?: MemberStatus;
 }

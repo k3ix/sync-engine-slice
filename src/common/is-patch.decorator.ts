@@ -13,7 +13,11 @@ export function IsPatch(): ClassDecorator {
       validator: {
         validate: (_: unknown, { object }: ValidationArguments) => {
           const values = Object.values(object);
-          return values.length > 0 && values.every((value) => value !== null);
+          return (
+            !Object.hasOwn(object, CHECKED_PROPERTY) &&
+            values.length > 0 &&
+            values.every((value) => value !== null)
+          );
         },
       },
     });

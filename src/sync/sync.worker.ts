@@ -53,9 +53,19 @@ export class SyncWorker implements OnApplicationBootstrap, BeforeApplicationShut
       this.rerun = true;
       return this.running;
     }
-    this.running = this.loop().finally(() => {
-      this.running = undefined;
-    });
+    this.running = this.loop()
+      .catch((error: unknown) => {
+        this.logger.error({
+          msg: 'Sync drain failed; pending changes wait for the next drain',
+          error,
+        });
+      })
+      .finally(() => {
+        this.running = undefined;
+        if (this.rerun) {
+          void this.drain();
+        }
+      });
     return this.running;
   }
 

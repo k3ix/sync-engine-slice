@@ -99,6 +99,12 @@ describe('POST /sync/changes', () => {
     ['a record id that is not a uuid', { ...createProject(), recordId: 'abc' }],
     ['a missing timestamp', { ...createProject(), clientTimestamp: undefined }],
     ['a timestamp beyond the safe integer range', { ...createProject(), clientTimestamp: 2 ** 60 }],
+    ['a create with null data', { ...createProject(), data: null }],
+    ['an update with null data', { ...createProject(), action: 'update', data: null }],
+    [
+      'an update carrying only the patch check property',
+      { ...createProject(), action: 'update', data: { isPatch: 'x' } },
+    ],
   ])('rejects the whole push when one change has %s', async (_, invalid) => {
     const res = await push([createProject(), invalid]);
 

@@ -90,6 +90,18 @@ describe.each(resources)('$url', ({ url, payload, defaults, patch }) => {
     expect(res.statusCode).toBe(400);
   });
 
+  it('rejects a create with null for a defaulted field', async () => {
+    const nulls = Object.fromEntries(Object.keys(defaults).map((field) => [field, null]));
+
+    const res = await app.inject({
+      method: 'POST',
+      url,
+      payload: { ...(await payload()), ...nulls },
+    });
+
+    expect(res.statusCode).toBe(400);
+  });
+
   it('gets by id', async () => {
     const created = await create(url, await payload());
 
@@ -117,7 +129,7 @@ describe.each(resources)('$url', ({ url, payload, defaults, patch }) => {
     expect(page2.json()).toEqual([second]);
   });
 
-  it.each(['limit=0', 'limit=101', 'limit=abc', 'offset=-1', 'nope=1'])(
+  it.each(['limit=0', 'limit=101', 'limit=abc', 'offset=-1', 'offset=1e20', 'nope=1'])(
     'rejects a list with %s',
     async (query) => {
       const res = await app.inject({ method: 'GET', url: `${url}?${query}` });
@@ -144,6 +156,7 @@ describe.each(resources)('$url', ({ url, payload, defaults, patch }) => {
     ['a server-set field', { id: randomUUID() }],
     ['an invalid status', { status: 'nope' }],
     ['a null field', { status: null }],
+    ['only the patch check property', { isPatch: 'x' }],
   ])('rejects a patch with %s', async (_, body) => {
     const created = await create(url, await payload());
 

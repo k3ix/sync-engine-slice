@@ -42,7 +42,7 @@ function dataDtoFor({ model, action }: Record<string, unknown>): DtoClass {
 @ValidatorConstraint({ name: 'dataMatchesAction' })
 class DataMatchesAction implements ValidatorConstraintInterface {
   validate(action: unknown, { object }: ValidationArguments): boolean {
-    const hasData = 'data' in object && object.data !== undefined;
+    const hasData = 'data' in object && object.data !== undefined && object.data !== null;
     return action === 'delete' ? !hasData : hasData;
   }
 
