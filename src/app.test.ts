@@ -16,4 +16,13 @@ describe('app', () => {
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ status: 'ok' });
   });
+
+  it('serves the OpenAPI document', async () => {
+    const res = await app.inject({ method: 'GET', url: '/docs-json' });
+
+    expect(res.statusCode).toBe(200);
+    expect(Object.keys(res.json().paths)).toEqual(
+      expect.arrayContaining(['/projects', '/issues/{id}', '/sync/changes']),
+    );
+  });
 });

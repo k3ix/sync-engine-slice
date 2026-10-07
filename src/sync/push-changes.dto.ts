@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiExtraModels, ApiProperty, ApiPropertyOptional, getSchemaPath } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
@@ -51,6 +51,9 @@ class DataMatchesAction implements ValidatorConstraintInterface {
   }
 }
 
+const DATA_DTO_CLASSES = Object.values(DATA_DTOS).flatMap(({ create, update }) => [create, update]);
+
+@ApiExtraModels(...DATA_DTO_CLASSES)
 export class ChangeDto {
   @ApiProperty({ enum: MODELS })
   @IsIn(MODELS)
@@ -65,7 +68,7 @@ export class ChangeDto {
   @Validate(DataMatchesAction)
   action: Action;
 
-  @ApiPropertyOptional({ type: Object })
+  @ApiPropertyOptional({ oneOf: DATA_DTO_CLASSES.map((dto) => ({ $ref: getSchemaPath(dto) })) })
   @IsOptional()
   @IsObject()
   @ValidateNested()
