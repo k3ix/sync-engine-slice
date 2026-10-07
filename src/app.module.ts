@@ -6,6 +6,9 @@ import { TransactionalAdapterTypeOrm } from '@nestjs-cls/transactional-adapter-t
 import { ClsModule } from 'nestjs-cls';
 import { databaseOptions } from './database/database.options.js';
 import { HealthController } from './health.controller.js';
+import { IssuesModule } from './issues/issues.module.js';
+import { MembersModule } from './members/members.module.js';
+import { ProjectsModule } from './projects/projects.module.js';
 
 @Module({
   imports: [
@@ -26,6 +29,9 @@ import { HealthController } from './health.controller.js';
         }),
       ],
     }),
+    ProjectsModule,
+    MembersModule,
+    IssuesModule,
   ],
   controllers: [HealthController],
 })
