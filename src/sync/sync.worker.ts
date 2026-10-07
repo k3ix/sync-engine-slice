@@ -9,8 +9,14 @@ import {
 import { TransactionHost } from '@nestjs-cls/transactional';
 import type { TransactionalAdapterTypeOrm } from '@nestjs-cls/transactional-adapter-typeorm';
 import type { Change } from './change.entity.js';
-import { type AppliedChange, ChangesService } from './changes.service.js';
-import { type Fields, type Model, SYNC_TARGETS, type SyncTarget } from './sync.types.js';
+import { ChangesService } from './changes.service.js';
+import {
+  type AppliedChange,
+  type Fields,
+  type Model,
+  SYNC_TARGETS,
+  type SyncTarget,
+} from './sync.types.js';
 
 // A field wins only if every applied write to it is strictly older, so a replay (same timestamp) loses.
 export function winningFields(data: Fields, clientTs: number, history: AppliedChange[]): Fields {

@@ -10,11 +10,12 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { Project } from '../projects/project.entity.js';
-
-export const ISSUE_PRIORITIES = ['normal', 'urgent'] as const;
-export const ISSUE_STATUSES = ['backlog', 'in_progress', 'done', 'cancelled'] as const;
-export type IssuePriority = (typeof ISSUE_PRIORITIES)[number];
-export type IssueStatus = (typeof ISSUE_STATUSES)[number];
+import {
+  ISSUE_PRIORITIES,
+  ISSUE_STATUSES,
+  type IssuePriority,
+  type IssueStatus,
+} from './issues.types.js';
 
 @Entity('issues')
 @Index('issues_project_id_idx', ['projectId'])

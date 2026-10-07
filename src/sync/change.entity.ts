@@ -1,9 +1,14 @@
 import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 import { bigintTransformer } from '../database/bigint.transformer.js';
-import { ACTIONS, type Action, type Fields, MODELS, type Model } from './sync.types.js';
-
-export const CHANGE_STATUSES = ['pending', 'applied', 'superseded', 'rejected'] as const;
-export type ChangeStatus = (typeof CHANGE_STATUSES)[number];
+import {
+  ACTIONS,
+  type Action,
+  CHANGE_STATUSES,
+  type ChangeStatus,
+  type Fields,
+  MODELS,
+  type Model,
+} from './sync.types.js';
 
 @Entity('changes')
 @Index('changes_pending_idx', ['id'], { where: `status = 'pending'` })

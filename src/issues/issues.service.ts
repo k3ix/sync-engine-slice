@@ -2,22 +2,10 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { TransactionHost } from '@nestjs-cls/transactional';
 import type { TransactionalAdapterTypeOrm } from '@nestjs-cls/transactional-adapter-typeorm';
 import type { Repository } from 'typeorm';
-import type { Page } from '../common/page.query.js';
 import { WORKSPACE_ID } from '../common/workspace.constants.js';
 import { isForeignKeyViolation } from '../database/foreign-key.js';
-import { Issue, type IssuePriority, type IssueStatus } from './issue.entity.js';
-
-export type IssueFields = {
-  title: string;
-  description: string;
-  assigneeEmail: string;
-  priority: IssuePriority;
-  status: IssueStatus;
-  projectId: string;
-};
-export type CreateIssueInput = Omit<IssueFields, 'priority'> & { priority?: IssuePriority };
-export type UpdateIssueInput = Partial<IssueFields>;
-export type ListIssues = Page & { projectId?: string };
+import { Issue } from './issue.entity.js';
+import type { CreateIssueInput, ListIssues, UpdateIssueInput } from './issues.types.js';
 
 @Injectable()
 export class IssuesService {

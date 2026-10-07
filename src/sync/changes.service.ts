@@ -3,9 +3,7 @@ import { Propagation, Transactional, TransactionHost } from '@nestjs-cls/transac
 import type { TransactionalAdapterTypeOrm } from '@nestjs-cls/transactional-adapter-typeorm';
 import type { Repository } from 'typeorm';
 import { Change } from './change.entity.js';
-import type { ChangeInput, Fields, Model } from './sync.types.js';
-
-export type AppliedChange = Pick<Change, 'action' | 'clientTs' | 'applied'>;
+import type { AppliedChange, ChangeInput, Fields, Model } from './sync.types.js';
 
 @Injectable()
 export class ChangesService {

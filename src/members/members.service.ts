@@ -2,13 +2,10 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import type { TransactionalAdapterTypeOrm } from '@nestjs-cls/transactional-adapter-typeorm';
 import type { Repository } from 'typeorm';
-import type { Page } from '../common/page.query.js';
+import type { Page } from '../common/page.types.js';
 import { WORKSPACE_ID } from '../common/workspace.constants.js';
-import { Member, type MemberStatus } from './member.entity.js';
-
-export type MemberFields = { name: string; status: MemberStatus };
-export type CreateMemberInput = { name: string; status?: MemberStatus };
-export type UpdateMemberInput = Partial<MemberFields>;
+import { Member } from './member.entity.js';
+import type { CreateMemberInput, UpdateMemberInput } from './members.types.js';
 
 @Injectable()
 export class MembersService {

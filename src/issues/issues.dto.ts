@@ -15,7 +15,7 @@ import {
   ISSUE_STATUSES,
   type IssuePriority,
   type IssueStatus,
-} from './issue.entity.js';
+} from './issues.types.js';
 
 export class IssueFieldsDto {
   @ApiProperty()

@@ -1,7 +1,5 @@
 import { Column, CreateDateColumn, Entity, PrimaryColumn, UpdateDateColumn } from 'typeorm';
-
-export const MEMBER_STATUSES = ['invited', 'active', 'suspended', 'deactivated'] as const;
-export type MemberStatus = (typeof MEMBER_STATUSES)[number];
+import { MEMBER_STATUSES, type MemberStatus } from './members.types.js';
 
 @Entity('members')
 export class Member {

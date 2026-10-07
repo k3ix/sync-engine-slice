@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional, OmitType, PartialType } from '@nestjs/swagger';
 import { IsIn, IsNotEmpty, IsString, ValidateIf } from 'class-validator';
 import { IsPatch } from '../common/is-patch.decorator.js';
-import { MEMBER_STATUSES, type MemberStatus } from './member.entity.js';
+import { MEMBER_STATUSES, type MemberStatus } from './members.types.js';
 
 export class MemberFieldsDto {
   @ApiProperty()

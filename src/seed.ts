@@ -3,7 +3,8 @@ import { NestFactory } from '@nestjs/core';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import type { TransactionalAdapterTypeOrm } from '@nestjs-cls/transactional-adapter-typeorm';
 import { AppModule } from './app.module.js';
-import { type CreateIssueInput, IssuesService } from './issues/issues.service.js';
+import { IssuesService } from './issues/issues.service.js';
+import type { CreateIssueInput } from './issues/issues.types.js';
 import { MembersService } from './members/members.service.js';
 import { ProjectsService } from './projects/projects.service.js';
 

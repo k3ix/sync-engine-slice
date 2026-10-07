@@ -1,7 +1,5 @@
 import { Column, CreateDateColumn, Entity, PrimaryColumn, UpdateDateColumn } from 'typeorm';
-
-export const PROJECT_STATUSES = ['draft', 'active', 'paused', 'completed'] as const;
-export type ProjectStatus = (typeof PROJECT_STATUSES)[number];
+import { PROJECT_STATUSES, type ProjectStatus } from './projects.types.js';
 
 @Entity('projects')
 export class Project {

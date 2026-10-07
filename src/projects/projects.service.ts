@@ -2,14 +2,11 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import { TransactionHost } from '@nestjs-cls/transactional';
 import type { TransactionalAdapterTypeOrm } from '@nestjs-cls/transactional-adapter-typeorm';
 import type { Repository } from 'typeorm';
-import type { Page } from '../common/page.query.js';
+import type { Page } from '../common/page.types.js';
 import { WORKSPACE_ID } from '../common/workspace.constants.js';
 import { isForeignKeyViolation } from '../database/foreign-key.js';
-import { Project, type ProjectStatus } from './project.entity.js';
-
-export type ProjectFields = { name: string; status: ProjectStatus };
-export type CreateProjectInput = { name: string; status?: ProjectStatus };
-export type UpdateProjectInput = Partial<ProjectFields>;
+import { Project } from './project.entity.js';
+import type { CreateProjectInput, UpdateProjectInput } from './projects.types.js';
 
 @Injectable()
 export class ProjectsService {

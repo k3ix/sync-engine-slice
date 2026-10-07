@@ -20,13 +20,12 @@ import {
 import { IssueFieldsDto, UpdateIssueDto } from '../issues/issues.dto.js';
 import { MemberFieldsDto, UpdateMemberDto } from '../members/members.dto.js';
 import { ProjectFieldsDto, UpdateProjectDto } from '../projects/projects.dto.js';
+import { MAX_BATCH } from './sync.constants.js';
 import { ACTIONS, type Action, type Fields, isModel, MODELS, type Model } from './sync.types.js';
-
-export const MAX_BATCH = 100;
 
 type DtoClass = new () => object;
 
-export const DATA_DTOS: Record<Model, { create: DtoClass; update: DtoClass }> = {
+const DATA_DTOS: Record<Model, { create: DtoClass; update: DtoClass }> = {
   projects: { create: ProjectFieldsDto, update: UpdateProjectDto },
   issues: { create: IssueFieldsDto, update: UpdateIssueDto },
   members: { create: MemberFieldsDto, update: UpdateMemberDto },

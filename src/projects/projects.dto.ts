@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional, OmitType, PartialType } from '@nestjs/swagger';
 import { IsIn, IsNotEmpty, IsString, ValidateIf } from 'class-validator';
 import { IsPatch } from '../common/is-patch.decorator.js';
-import { PROJECT_STATUSES, type ProjectStatus } from './project.entity.js';
+import { PROJECT_STATUSES, type ProjectStatus } from './projects.types.js';
 
 export class ProjectFieldsDto {
   @ApiProperty()

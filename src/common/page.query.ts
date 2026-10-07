@@ -1,12 +1,11 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsInt, IsOptional, Max, Min } from 'class-validator';
+import type { Page } from './page.types.js';
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
 const MAX_OFFSET = Number.MAX_SAFE_INTEGER;
-
-export type Page = { limit: number; offset: number };
 
 export class PageQuery implements Page {
   @ApiPropertyOptional({ minimum: 1, maximum: MAX_LIMIT, default: DEFAULT_LIMIT })
