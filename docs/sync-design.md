@@ -21,7 +21,8 @@ at 10:00:05. User 2 sets `status = cancelled` at 10:00:02 and it arrives at 10:0
   backend sees it. This is the only client id: there is no separate change id. Retries are safe
   because a replayed change always loses: a replayed create finds the record, a replayed update
   has the same timestamp as the applied one, a replayed delete finds the record deleted. A retried
-  push is stored again as `superseded` rows.
+  push is stored again as `superseded` rows. Records created through REST get a `uuidv7()` id from
+  Postgres.
 - Client clocks are trusted to be correct. The timestamp is epoch milliseconds. This is a deliberate
   shortcut, not the target: a skewed or manipulated clock wins every conflict. The replacement is a
   base version per record, with the server as the only source of order.
@@ -30,18 +31,32 @@ at 10:00:05. User 2 sets `status = cancelled` at 10:00:02 and it arrives at 10:0
 - There are no per-field timestamp columns. The history of applied changes in the `changes` table
   is the source for comparisons.
 - A delete always wins. Once a record is deleted, any later update or create for that id is
-  skipped, whatever its timestamp. The row is hard-deleted as today; the applied delete in
-  `changes` is what remembers it.
-- Referential rules stay as they are: an issue for a missing project is rejected; deleting a
-  project that still has issues is rejected.
+  skipped, whatever its timestamp. The row is hard-deleted; the applied delete in `changes` is what
+  remembers it.
+- Foreign keys decide referential rules, not a check before the write: an issue for a missing
+  project is a `400` and deleting a project that still has issues is a `409`, both translated from
+  the constraint violation (`23503`), so there is no window between a check and the write.
 - A push answers `202 Accepted` with an empty body once the changes are stored. The frontend learns
   outcomes through polling (next phase). How a sender learns about its rejected changes is
   decided in that phase too.
 - One `changes` table holds both received and processed changes.
-- The worker runs in the same process. It applies each change through the existing services and
+- The worker runs in the same process. It applies each change through the resource services and
   writes the `changes` row in the same transaction: a data write without its `sync_id` cannot be
   committed.
-- The REST endpoints are not changed. Their writes do not go through `changes`; see Limitations.
+- Postgres from the start rather than SQLite first: driver-specific code is written once, and the
+  next step is only about sync.
+- Transactions go through `@nestjs-cls/transactional`: services take the current transaction from
+  `TransactionHost`, so the worker and the controllers decide where a transaction starts and the
+  services do not pass a handle around. Outside a transaction `TransactionHost.tx` silently falls
+  back to a plain connection, so `markApplied` and `markSkipped` require one
+  (`Propagation.Mandatory`) and throw without it: a `sync_id` can never be written outside the
+  transaction that writes the data.
+- One drain loop per process. With async database calls two loops could read the same pending
+  change and both apply it, or compute the same `MAX(sync_id) + 1`. A drain requested while one
+  runs makes the running loop go round once more instead of starting a second one. Across
+  processes a Redis lock would not help: a lease can expire while its holder is paused, and it does
+  not order commits. The step 2 counter row in the database does both.
+- The REST endpoints do not write through `changes`; see Limitations.
 
 ## API
 
@@ -66,18 +81,20 @@ at 10:00:05. User 2 sets `status = cancelled` at 10:00:02 and it arrives at 10:0
 - `data`:
   - `create`: every writable field of the model is required, with no defaults (the frontend already
     holds the full record).
-  - `update`: at least one writable field.
+  - `update`: at least one writable field, no `null` values.
   - `delete`: no `data`.
-- `recordId` is a UUID; `clientTimestamp` is a non-negative integer.
+- `recordId` is a UUID; `clientTimestamp` is a non-negative integer up to
+  `Number.MAX_SAFE_INTEGER`.
 - At most 100 changes per push.
 
-Validation is done by the route schema: a `oneOf` over the nine model and action pairs, built from
-the field schemas each resource's routes file already has (exported, not duplicated). Unknown fields
-are rejected. If any change in a push is invalid, the whole push is rejected with `400` and nothing
-is stored, because a malformed change is a frontend bug and should be loud.
+Validation is done by DTOs (class-validator). `data` is validated against the resource's own field
+DTO for a create and its update DTO for an update, chosen per change from `model` and `action`, so
+the field rules are not duplicated. Unknown fields are rejected. If any change in a push is invalid,
+the whole push is rejected with `400` and nothing is stored, because a malformed change is a
+frontend bug and should be loud.
 
-On success, all changes are inserted in one transaction as `pending`, the handler answers `202`,
-and a drain of the worker is scheduled.
+On success, all changes are inserted with one multi-row `INSERT` as `pending`, the handler answers
+`202`, and a drain of the worker starts.
 
 Ordering contract for the client: it keeps one push in flight at a time and retries a failed push
 before sending the next one, so its own changes arrive in the order it made them.
@@ -85,38 +102,37 @@ before sending the next one, so its own changes arrive in the order it made them
 ## Table
 
 ```sql
-CREATE TABLE IF NOT EXISTS changes (
-  id INTEGER PRIMARY KEY,
-  model TEXT NOT NULL CHECK (model IN ('projects', 'issues', 'members')),
-  record_id TEXT NOT NULL,
-  action TEXT NOT NULL CHECK (action IN ('create', 'update', 'delete')),
-  data TEXT,
-  client_ts INTEGER NOT NULL,
-  status TEXT NOT NULL CHECK (status IN ('pending', 'applied', 'superseded', 'rejected')),
-  applied TEXT,
-  reason TEXT,
-  sync_id INTEGER UNIQUE,
-  received_at TEXT NOT NULL,
-  processed_at TEXT
+CREATE TABLE changes (
+  id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  model change_model NOT NULL,
+  record_id uuid NOT NULL,
+  action change_action NOT NULL,
+  data jsonb,
+  client_ts bigint NOT NULL,
+  status change_status NOT NULL,
+  applied jsonb,
+  reason text,
+  sync_id bigint UNIQUE,
+  received_at timestamptz NOT NULL DEFAULT now(),
+  processed_at timestamptz
 );
 
-CREATE INDEX IF NOT EXISTS changes_pending_idx ON changes (id) WHERE status = 'pending';
-CREATE INDEX IF NOT EXISTS changes_record_idx ON changes (model, record_id);
+CREATE INDEX changes_pending_idx ON changes (id) WHERE status = 'pending';
+CREATE INDEX changes_record_idx ON changes (model, record_id);
 ```
 
 - `id` is arrival order; the worker processes pending rows by `id`.
-- `data` is the change as sent (JSON). `applied` is the fields actually written (JSON), which can be
-  a subset of `data` when some fields lost. It is `NULL` for deletes and for changes that were not
-  applied.
+- `data` is the change as sent. `applied` is the fields actually written, which can be a subset of
+  `data` when some fields lost. It is `NULL` for deletes and for changes that were not applied.
 - `sync_id` is set only for `applied` rows, as `COALESCE(MAX(sync_id), 0) + 1` inside the worker's
-  transaction. SQLite has one writer at a time and `node:sqlite` is synchronous, so ids are gapless
-  and commit in order. Polling will read `WHERE sync_id > N ORDER BY sync_id`.
+  transaction. It is gapless and in commit order because one drain loop runs per process; with
+  several processes it is not, and step 2 replaces it with a counter row per workspace locked until
+  commit. Polling will read `WHERE sync_id > N ORDER BY sync_id`.
 - `reason` explains `superseded` and `rejected` rows.
 
 ## Worker
 
-`SyncWorker.drain()` takes pending rows in `id` order and processes each one in its own transaction
-(`BEGIN` ... `COMMIT`):
+`SyncWorker.drain()` takes pending rows in `id` order and processes each one in its own transaction:
 
 1. Resolve the change against the current table row and the record's applied history in `changes`.
 2. If it wins (fully or partly), call the resource service (`create`, `update`, `delete`).
@@ -139,24 +155,20 @@ is in the resource table; "deleted" means an applied delete for this record is i
 A field wins when no applied change for the same record touched that field with the same or a
 later `client_ts`. The applied create counts as touching every field. Example: an
 applied update `{ status: cancelled }` at 10:00:02, then an incoming update
-`{ assignee_email: "ada@new.io", status: done }` at 10:00:00: `assignee_email` wins, `status` loses, the
-service writes only `assignee_email`, and `applied` is `{ "assignee_email": "ada@new.io" }`.
+`{ assigneeEmail: "ada@new.io", status: done }` at 10:00:00: `assigneeEmail` wins, `status` loses,
+the service writes only `assigneeEmail`, and `applied` is `{ "assigneeEmail": "ada@new.io" }`.
 
 Errors:
-- An `HttpError` from a service (issue with a missing project, project with issues) marks the change
-  `rejected` with the error message. The failed statement changes nothing, and the transaction
-  commits the status.
+- An `HttpException` from a service (issue with a missing project, project with issues) marks the
+  change `rejected` with the error message. Postgres aborts a transaction after a failed statement,
+  so the rejection is recorded in a new transaction.
 - Any other error rolls the transaction back, leaves the row `pending`, logs it and stops the drain.
   The next drain retries from the same row, which keeps order but means one broken row blocks the
   queue until it is fixed.
 
-Triggers: the push handler schedules a drain after it responds; the app drains once on `onReady`
-to pick up rows left pending by a crash. Only one drain runs at a time, because the drain is
-synchronous. Drain errors are logged, never thrown into a request.
-
-Service changes: `create` in each service accepts an optional id (the client's `recordId`) and
-generates one only when it is missing. Nothing else in the services changes. `created_at` and
-`updated_at` on records stay server time.
+Triggers: the push handler starts a drain after the insert; the app drains once on bootstrap to
+pick up rows left pending by a crash; shutdown waits for a running drain. Drain errors are logged,
+never thrown into a request.
 
 ## Files
 
@@ -165,14 +177,16 @@ generates one only when it is missing. Nothing else in the services changes. `cr
   rejected.
 - `src/sync/sync.worker.ts`: `SyncWorker` with `drain()`, plus the pure `winningFields` function.
   It wires resolution, the resource services and the ledger in one transaction per change.
-- `src/sync/sync.routes.ts`: `POST /sync/changes` and its schema.
-- `src/db.ts`: the `changes` table.
-- `src/app.ts`: wiring, the `onReady` drain.
-- `src/seed.ts`: also clears `changes`.
+- `src/sync/sync.controller.ts` and `src/sync/push-changes.dto.ts`: `POST /sync/changes` and its
+  validation.
+- `src/sync/sync.module.ts`: wiring, including the map from model to resource service.
+- `src/database/migrations/`: the tables.
 
 ## Testing
 
-- Worker tests with an in-memory database, calling `drain()` directly:
+Tests run against a real Postgres started by Testcontainers.
+
+- Worker tests, calling `drain()` directly:
   - the example above in both arrival orders gives `cancelled`;
   - updates to different fields both apply, and a partly older update applies only its newer fields;
   - replayed create, update and delete are superseded;
@@ -180,18 +194,20 @@ generates one only when it is missing. Nothing else in the services changes. `cr
   - an issue for a missing project and a project with issues are rejected;
   - an update and a delete for a missing record are rejected;
   - `sync_id` is 1, 2, 3 across applied changes only;
-  - an unexpected error leaves the row pending and stops the drain.
+  - two drains started together run as one and apply every change once;
+  - an unexpected error leaves the row pending and stops the drain;
+  - `markApplied` outside a transaction throws.
 - API tests with `app.inject()`:
-  - a valid push answers 202 and is applied after the drain;
-  - a malformed change gives 400 with nothing stored.
+  - a valid push answers 202 and is applied by the drain;
+  - concurrent pushes get distinct consecutive `sync_id`s;
+  - a malformed change, an empty batch or a batch over 100 gives 400 with nothing stored.
 
 ## Limitations
 
 - Conflicts are decided by client clocks, which the client controls; see Decisions.
 - REST writes bypass `changes`, so they get no `sync_id`, pollers will not see them, and
   resolution treats their fields as having no history (any sync update wins over them).
-- The drain runs synchronously until the queue is empty, which blocks the event loop for a large
-  backlog. Process in chunks when that matters.
+- One drain loop per process; several processes would need the step 2 counter.
 - Resolution reads the record's whole applied history per change. That is fine for small
   histories; add a per-field index when histories grow.
 - Out of scope: polling and broadcast, telling the sender about rejections, auth, multiple

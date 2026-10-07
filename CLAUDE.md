@@ -1,35 +1,26 @@
-# Workspace
+# sync-engine-slice
 
-Fastify 5 + TypeScript + vitest. pnpm.
+NestJS 12 on Fastify, TypeORM, Postgres 18, vitest. pnpm. ESM.
 
-- `pnpm test -- --run` runs tests once; `pnpm typecheck`; `pnpm check` formats and lints (Biome).
-- `pnpm dev` starts the server on port 3000 with reload.
-
-## How we work
-
-- Before writing code, restate the task in two or three sentences, list the edge cases you see, and
-  propose the steps. Wait for a go.
-- Tests first for the agreed cases. Run them and show that they fail, then implement.
-- One small step at a time. Keep each diff small enough to read in a minute. After each step, say
-  what changed and why in a few lines, and run tests, typecheck and lint.
-- Ask one question when something is ambiguous instead of guessing.
-- Do not add a dependency without asking. Do not commit unless asked; before a commit, show
-  `git status` and the diff.
-- When unsure about a library API, read its README or types in `node_modules` instead of guessing.
-- Reply in English, briefly.
+- `docker compose up -d` for the dev database; `pnpm dev` on port 3000, docs at `/docs`.
+- `pnpm test -- --run` (needs Docker, starts its own Postgres); `pnpm typecheck`; `pnpm check`
+  formats and lints (Biome).
+- TypeScript 7 only type-checks; SWC compiles. No Nest CLI, no ts-node, no swc-node: `dev`, `seed`
+  and the TypeORM CLI run the built `dist`.
 
 ## Code conventions
 
-- `src/app.ts` exports `buildApp(opts)` and never listens. `src/server.ts` listens. Tests use
-  `app.inject()`, no real port.
-- A feature is a Fastify plugin with its routes, schemas and a service. Services are plain classes
-  with no Fastify imports; dependencies are passed in and wired in one place.
-- Validate with route schemas, not with checks in handlers.
-- Errors are thrown with a `statusCode` and shaped in one `setErrorHandler`. Response bodies carry
-  data only.
+- A feature is a Nest module: controller, service, entity, DTOs. Services read and write through
+  `TransactionHost.tx`; write endpoints are `@Transactional()`.
+- Validation lives in DTOs (class-validator); the global `ValidationPipe` rejects unknown fields.
+- Schema changes only through migrations in `src/database/migrations`; entities list explicit
+  column types.
+- Errors are Nest HTTP exceptions; response bodies carry data only.
+- Relative imports end in `.js`.
 - TypeScript: no `any`; `??` over `||`; braces on every block; named constants instead of magic
   numbers; an object parameter when a function takes several values of the same type; `getX`
   throws when missing, `findX` returns `undefined`; signal failure by throwing, not by returning
   `false`.
 - Anything that can be delivered or retried twice must be idempotent.
 - Comments only where the reason is not obvious from the code.
+- Tests: `createTestApp()` and `truncateAll()` from `test/create-test-app.ts`; one app per file.
