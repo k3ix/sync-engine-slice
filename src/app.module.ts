@@ -9,6 +9,7 @@ import { HealthController } from './health.controller.js';
 import { IssuesModule } from './issues/issues.module.js';
 import { MembersModule } from './members/members.module.js';
 import { ProjectsModule } from './projects/projects.module.js';
+import { SyncModule } from './sync/sync.module.js';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { ProjectsModule } from './projects/projects.module.js';
     ProjectsModule,
     MembersModule,
     IssuesModule,
+    SyncModule,
   ],
   controllers: [HealthController],
 })
